@@ -25,6 +25,8 @@ const DEFAULTS = {
   timerMinutes: 25,
   showLyrics: true,
   peekApps: true,
+  mirrorNotifs: true,
+  notifMute: [],
   firstRun: true,
 };
 const settingsPath = () => path.join(app.getPath('userData'), 'settings.json');
@@ -107,6 +109,34 @@ function startMedia() {
   });
   mediaProc.on('exit', () => { mediaProc = null; setTimeout(startMedia, 4000); });
 }
+// ---------------------------------------------------------------- notification mirror
+let notifProc = null;
+function startNotifs() {
+  if (process.platform !== 'win32' || notifProc) return;
+  const script = path.join(__dirname, 'notify.ps1').replace('app.asar', 'app.asar.unpacked');
+  notifProc = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script], { windowsHide: true });
+  let buf = '';
+  notifProc.stdout.setEncoding('utf8');
+  notifProc.stdout.on('data', (chunk) => {
+    buf += chunk; let i;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+      if (!line) continue;
+      try {
+        const m = JSON.parse(line.replace(/^\uFEFF/, ''));
+        if (m.type === 'notif' && settings.mirrorNotifs && !(settings.notifMute || []).includes(m.appId)) send('notif', m);
+        if (m.type === 'notif-status') send('notif-status', m);
+      } catch {}
+    }
+  });
+  notifProc.on('exit', () => { notifProc = null; if (settings.mirrorNotifs) setTimeout(startNotifs, 5000); });
+}
+ipcMain.on('notif:open', (_e, n) => {
+  if (n && n.url && /^[a-z][a-z0-9+.-]{1,30}:/i.test(n.url) && !/^(file|javascript|vbscript|data):/i.test(n.url)) return shell.openExternal(n.url);
+  if (n && n.appId && notifProc) try { notifProc.stdin.write('activate ' + String(n.appId).replace(/[\r\n]/g, '') + '\n'); } catch {}
+});
+ipcMain.on('notif:mute', (_e, appId) => { settings.notifMute = [...new Set([...(settings.notifMute || []), appId])]; saveSettings(); });
+
 function mediaCommand(cmd) { if (mediaProc) try { mediaProc.stdin.write(cmd + '\n'); } catch {} }
 ipcMain.on('media', (_e, cmd) => mediaCommand(cmd));
 
@@ -193,6 +223,8 @@ ipcMain.handle('city:search', async (_e, name) => {
 ipcMain.handle('settings:get', () => ({ ...settings, effectiveTheme: effectiveTheme(), hooksInstalled: hooksInstalled(), openAtLogin: app.getLoginItemSettings().openAtLogin }));
 ipcMain.on('settings:set', (_e, patch) => {
   settings = { ...settings, ...patch }; saveSettings();
+  if (patch.mirrorNotifs === true && !notifProc) startNotifs();
+  if (patch.mirrorNotifs === false && notifProc) try { notifProc.kill(); } catch {}
   if ('theme' in patch) send('theme', effectiveTheme());
   buildTrayMenu();
 });
@@ -434,6 +466,7 @@ else {
     setupUpdater();
     startServer();
     startMedia();
+    startNotifs();
     win.webContents.on('did-finish-load', () => { send('theme', effectiveTheme()); startWeather(); if (lastTrackKey) lastTrackKey = ''; });
   });
   app.on('will-quit', () => { globalShortcut.unregisterAll(); if (mediaProc) try { mediaProc.kill(); } catch {} });

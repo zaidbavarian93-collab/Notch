@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-const channels = ['media', 'art', 'lyrics', 'weather', 'peek', 'theme', 'open-settings', 'claude:ask', 'claude:resolved', 'claude:done', 'claude:working', 'mouse-out', 'update:ready', 'care:tab'];
+const channels = ['media', 'art', 'lyrics', 'weather', 'peek', 'theme', 'open-settings', 'claude:ask', 'claude:resolved', 'claude:done', 'claude:working', 'mouse-out', 'update:ready', 'care:tab', 'notif', 'notif-status'];
 
 contextBridge.exposeInMainWorld('notch', {
   on: (ch, cb) => { if (channels.includes(ch)) ipcRenderer.on(ch, (_e, d) => cb(d)); },
@@ -22,4 +22,6 @@ contextBridge.exposeInMainWorld('notch', {
   trash: (p) => ipcRenderer.invoke('shell:trash', p),
   installUpdate: () => ipcRenderer.send('update:install'),
   version: () => ipcRenderer.invoke('app:version'),
+  notifOpen: (n) => ipcRenderer.send('notif:open', n),
+  notifMute: (appId) => ipcRenderer.send('notif:mute', appId),
 });

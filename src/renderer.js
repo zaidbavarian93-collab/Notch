@@ -7,7 +7,7 @@ const LOC = 'ar-IQ-u-nu-latn';
 let S = { widgets: ['music', 'weather', 'date', 'timer', 'system'], hidden: [], timerMinutes: 25, showLyrics: true };
 
 // ======================================================== state machine
-const ui = { hovering: false, settings: false, asks: [], done: null, peek: null, peekQ: [] };
+const ui = { hovering: false, settings: false, asks: [], done: null, peek: null, peekQ: [], notif: null, inbox: false };
 let curState = 'idle';
 
 const WIDTHS = { music: 236, weather: 162, date: 152, timer: 96, system: 132 };
@@ -18,7 +18,9 @@ function openWidth() {
 function computeState() {
   if (ui.settings) return 'settings';
   if (ui.asks.length) return 'ask';
+  if (ui.notif) return 'notif';
   if (ui.done) return 'done';
+  if (ui.inbox && ui.hovering) return 'inbox';
   if (ui.hovering) return 'open';
   if (ui.peek) return 'peek';
   return 'idle';
@@ -38,6 +40,8 @@ function render() {
   } else if (st === 'open') { w = openWidth(); h = measure($('viewOpen'), w); }
   else if (st === 'ask') { w = 600; h = measure($('viewAsk'), w); }
   else if (st === 'done') { w = 420; h = measure($('viewDone'), w); }
+  else if (st === 'notif') { w = 520; h = measure($('viewNotif'), w); }
+  else if (st === 'inbox') { w = 560; h = Math.min(430, measure($('viewInbox'), w)); }
   else if (st === 'settings') { w = 740; h = measure($('viewSettings'), w); }
   island.style.width = w + 'px';
   island.style.height = h + 'px';
@@ -51,7 +55,7 @@ function setInside(v) {
   N.mouse(v);
   clearTimeout(enterT); clearTimeout(leaveT);
   if (v) enterT = setTimeout(() => { ui.hovering = true; render(); }, 70);
-  else leaveT = setTimeout(() => { ui.hovering = false; render(); }, 380);
+  else leaveT = setTimeout(() => { ui.hovering = false; ui.inbox = false; render(); }, 380);
 }
 document.addEventListener('mousemove', (e) => setInside(!!e.target.closest('#island')));
 document.addEventListener('mouseleave', () => setInside(false));
@@ -423,6 +427,7 @@ function paintSettings(s) {
   $('timerMin').value = s.timerMinutes;
   $('optLyrics').checked = !!s.showLyrics;
   $('optApps').checked = !!s.peekApps;
+  $('optNotifs').checked = s.mirrorNotifs !== false;
   $('optLogin').checked = !!s.openAtLogin;
   paintHooks(s.hooksInstalled);
 }
@@ -454,6 +459,7 @@ document.querySelectorAll('#segTheme button').forEach(b => b.onclick = () => {
 $('timerMin').onchange = () => { const v = Math.min(180, Math.max(1, +$('timerMin').value || 25)); S.timerMinutes = v; N.setSettings({ timerMinutes: v }); if (!timer.running) resetTimer(); };
 $('optLyrics').onchange = (e) => { S.showLyrics = e.target.checked; N.setSettings({ showLyrics: S.showLyrics }); paintMedia(); };
 $('optApps').onchange = (e) => N.setSettings({ peekApps: e.target.checked });
+$('optNotifs').onchange = (e) => N.setSettings({ mirrorNotifs: e.target.checked });
 $('optLogin').onchange = (e) => N.setLogin(e.target.checked);
 
 // ======================================================== boot
@@ -465,3 +471,85 @@ function refreshAll() { paintMedia(); paintWeather(); paintDate(); paintTimer();
   timer.total = timer.left = (S.timerMinutes || 25) * 60;
   buildCards(); refreshAll(); render();
 })();
+
+
+// ======================================================== mirrored app notifications
+const notifQ = [], notifHist = [];
+let notifT = null, notifHover = false;
+const esc = (x) => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const hue = (s) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+function avatar(n, cls) {
+  if (n.image) return `<span class="${cls} img" style="background-image:url('${esc(n.image)}')"></span>`;
+  return `<span class="${cls}" style="--h:${hue(n.app)}">${esc((n.app || '?').trim().charAt(0).toUpperCase())}</span>`;
+}
+function timeAgo(t) { const s = Math.round((Date.now() - t) / 1000); return s < 60 ? 'الآن' : s < 3600 ? `قبل ${Math.round(s / 60)} د` : `قبل ${Math.round(s / 3600)} س`; }
+
+N.on('notif', (n) => {
+  n.at = Date.now();
+  notifHist.unshift(n); if (notifHist.length > 30) notifHist.pop();
+  paintBell();
+  if (ui.notif) notifQ.push(n); else showNotif(n);
+  if (ui.inbox) paintInbox();
+});
+function showNotif(n) {
+  ui.notif = n;
+  const v = $('viewNotif');
+  v.innerHTML = `
+    <div class="nf">
+      ${avatar(n, 'nf-av')}
+      <div class="nf-body">
+        <div class="nf-app">${esc(n.app)} <span>· الآن</span></div>
+        <div class="nf-title" dir="auto">${esc(n.title || n.app)}</div>
+        ${n.body ? `<div class="nf-text" dir="auto">${esc(n.body)}</div>` : ''}
+      </div>
+      <button class="nf-x" data-a="close" title="إغلاق">✕</button>
+    </div>
+    <div class="nf-acts">
+      ${(n.actions || []).map((a, i) => `<button data-a="act" data-i="${i}" dir="auto">${esc(a.label)}</button>`).join('')}
+      <button class="primary" data-a="open">فتح</button>
+      <button class="ghost" data-a="mute" title="لا تعرض إشعارات هذا التطبيق في النوتش">كتم ${esc(n.app)}</button>
+      ${notifQ.length ? `<span class="nf-more">+${notifQ.length}</span>` : ''}
+    </div>`;
+  render();
+  armNotifTimer();
+}
+function armNotifTimer() { clearTimeout(notifT); notifT = setTimeout(() => { if (!notifHover) nextNotif(); else armNotifTimer(); }, 7000); }
+function nextNotif() { clearTimeout(notifT); ui.notif = null; const n = notifQ.shift(); if (n) showNotif(n); else render(); }
+$('viewNotif').addEventListener('mouseenter', () => { notifHover = true; });
+$('viewNotif').addEventListener('mouseleave', () => { notifHover = false; });
+$('viewNotif').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); const n = ui.notif; if (!n) return;
+  const a = b ? b.dataset.a : 'open';
+  if (a === 'open') N.notifOpen({ appId: n.appId, url: n.url });
+  if (a === 'act') { const act = n.actions[+b.dataset.i]; N.notifOpen({ appId: n.appId, url: act && act.url }); }
+  if (a === 'mute') { N.notifMute(n.appId); notifQ.splice(0, notifQ.length, ...notifQ.filter(x => x.appId !== n.appId)); peek({ kind: 'app', text: `تم كتم ${n.app}`, sub: '' }); }
+  nextNotif();
+});
+
+// bell + inbox
+function paintBell() {
+  const b = $('btnBell'); if (!b) return;
+  b.innerHTML = ICON.bell + (notifHist.length ? `<i class="badge">${notifHist.length > 9 ? '9+' : notifHist.length}</i>` : '');
+}
+function paintInbox() {
+  const v = $('viewInbox');
+  v.innerHTML = `<div class="ib-head"><b>الإشعارات</b><span>${notifHist.length}</span><div style="flex:1"></div>
+      ${notifHist.length ? '<button data-a="clear">مسح الكل</button>' : ''}<button data-a="back">رجوع</button></div>
+    <div class="ib-list">${notifHist.length ? notifHist.map((n, i) => `
+      <div class="ib-item" data-i="${i}">${avatar(n, 'ib-av')}
+        <div class="nf-body"><div class="nf-app">${esc(n.app)} <span>· ${timeAgo(n.at)}</span></div>
+        <div class="nf-title" dir="auto">${esc(n.title || n.app)}</div>${n.body ? `<div class="nf-text one" dir="auto">${esc(n.body)}</div>` : ''}</div>
+        <button class="nf-x" data-a="del" title="حذف">✕</button></div>`).join('') : '<div class="ib-empty">لا توجد إشعارات جديدة</div>'}</div>`;
+  if (curState === 'inbox') render();
+}
+$('viewInbox').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); const it = e.target.closest('.ib-item');
+  if (b && b.dataset.a === 'back') { ui.inbox = false; render(); return; }
+  if (b && b.dataset.a === 'clear') { notifHist.length = 0; paintBell(); paintInbox(); render(); return; }
+  if (!it) return;
+  const i = +it.dataset.i, n = notifHist[i];
+  if (b && b.dataset.a === 'del') { notifHist.splice(i, 1); paintBell(); paintInbox(); render(); return; }
+  N.notifOpen({ appId: n.appId, url: n.url }); notifHist.splice(i, 1); paintBell(); paintInbox();
+});
+$('btnBell').onclick = () => { ui.inbox = true; paintInbox(); render(); };
+paintBell();
