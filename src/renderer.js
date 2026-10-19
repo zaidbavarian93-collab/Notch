@@ -446,6 +446,7 @@ function paintSettings(s) {
   $('optApps').checked = !!s.peekApps;
   $('optNotifs').checked = s.mirrorNotifs !== false;
   $('optBlur').checked = !!s.blur;
+  paintSwatches();
   $('optLogin').checked = !!s.openAtLogin;
   paintHooks(s.hooksInstalled);
 }
@@ -488,6 +489,7 @@ function refreshAll() { paintMedia(); paintWeather(); paintDate(); paintTimer();
   if (!S.widgets.includes('system')) { S.widgets = [...S.widgets, 'system']; N.setSettings({ widgets: S.widgets }); }
   applyTheme(S.effectiveTheme || 'dark');
   applyGlass(S.blur);
+  applyPill(S.pillColor, S.pillOpacity);
   timer.total = timer.left = (S.timerMinutes || 25) * 60;
   buildCards(); refreshAll(); render();
 })();
@@ -573,3 +575,49 @@ $('viewInbox').addEventListener('click', (e) => {
 });
 $('btnBell').onclick = () => { ui.inbox = true; paintInbox(); render(); };
 paintBell();
+
+
+// ======================================================== notch colour
+const PILL_PRESETS = [
+  { v: '#050506', n: 'أسود' }, { v: '#2b2d33', n: 'رمادي' }, { v: '#f4f4f6', n: 'أبيض' },
+  { v: '#1e3a8a', n: 'كحلي' }, { v: '#6d28d9', n: 'بنفسجي' }, { v: '#be123c', n: 'أحمر' },
+  { v: '#047857', n: 'أخضر' }, { v: '#d97757', n: 'برتقالي' }, { v: '#db2777', n: 'وردي' },
+  { v: 'linear-gradient(120deg,#7c3aed,#db2777,#f59e0b)', n: 'غروب' },
+  { v: 'linear-gradient(120deg,#0ea5e9,#6366f1,#a855f7)', n: 'شفق' },
+  { v: 'clear', n: 'شفاف' },
+];
+function hexRgb(h) { h = h.replace('#', ''); if (h.length === 3) h = h.split('').map(c => c + c).join(''); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function applyPill(color, op) {
+  color = color || '#050506'; op = op == null ? 1 : +op;
+  const root = document.documentElement.style;
+  let bg, light = false, clear = false;
+  if (color === 'clear') { bg = 'rgba(20,20,24,0.18)'; clear = true; }
+  else if (color.startsWith('linear-gradient')) { bg = color; }
+  else {
+    const [r, g, b] = hexRgb(color);
+    bg = `rgba(${r},${g},${b},${op})`;
+    light = (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 && op > 0.45;
+    clear = op < 0.35;
+  }
+  root.setProperty('--pill', bg);
+  root.setProperty('--pill-fg', light ? '#16171b' : '#f4f4f6');
+  root.setProperty('--pill-fg2', light ? '#55565e' : 'rgba(244,244,246,.62)');
+  document.documentElement.classList.toggle('pill-clear', clear);
+  $('pillOp').disabled = color === 'clear' || color.startsWith('linear-gradient');
+}
+function paintSwatches() {
+  const row = $('swRow'); const cur = S.pillColor || '#050506';
+  row.innerHTML = PILL_PRESETS.map(p => `<button class="sw ${p.v === 'clear' ? 'clear' : ''} ${p.v === cur ? 'on' : ''}" data-v="${p.v}" title="${p.n}" style="${p.v === 'clear' ? '' : 'background:' + p.v}"></button>`).join('')
+    + `<input type="color" class="sw-pick" id="pillPick" title="لون مخصص" value="${/^#/.test(cur) ? cur : '#050506'}">`;
+  $('pillOp').value = Math.round((S.pillOpacity == null ? 1 : S.pillOpacity) * 100);
+  $('pillOpV').textContent = $('pillOp').value + '%';
+  $('pillPick').oninput = (e) => setPill(e.target.value, S.pillOpacity);
+}
+function setPill(color, op) {
+  S.pillColor = color; S.pillOpacity = op == null ? 1 : op;
+  applyPill(S.pillColor, S.pillOpacity);
+  N.setSettings({ pillColor: S.pillColor, pillOpacity: S.pillOpacity });
+  document.querySelectorAll('#swRow .sw').forEach(b => b.classList.toggle('on', b.dataset.v === color));
+}
+$('swRow').addEventListener('click', (e) => { const b = e.target.closest('.sw'); if (b) setPill(b.dataset.v, b.dataset.v === 'clear' ? 0 : (S.pillOpacity || 1)); });
+$('pillOp').oninput = (e) => { $('pillOpV').textContent = e.target.value + '%'; setPill(S.pillColor && !S.pillColor.startsWith('linear') && S.pillColor !== 'clear' ? S.pillColor : '#050506', e.target.value / 100); };

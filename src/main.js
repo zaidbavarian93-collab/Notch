@@ -30,6 +30,8 @@ const DEFAULTS = {
   firstRun: true,
   autoStart: true,
   blur: false,
+  pillColor: '#050506',
+  pillOpacity: 1,
 };
 const settingsPath = () => path.join(app.getPath('userData'), 'settings.json');
 function loadSettings() {
