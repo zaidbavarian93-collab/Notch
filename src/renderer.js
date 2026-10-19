@@ -45,7 +45,24 @@ function render() {
   else if (st === 'settings') { w = 740; h = measure($('viewSettings'), w); }
   island.style.width = w + 'px';
   island.style.height = h + 'px';
+  trackGlass();
 }
+
+// ---- glass backdrop sync: report the island's live rectangle while it animates
+let glassUntil = 0, glassRaf = 0;
+function sendRect() {
+  const st = curState, visible = S.blur && !['idle', 'peek'].includes(st);
+  const r = island.getBoundingClientRect();
+  N.islandRect && N.islandRect({ visible, x: r.left, y: r.top, w: r.width, h: r.height, r: visible ? 24 : 0 });
+}
+function trackGlass() {
+  if (!S.blur) return;
+  glassUntil = performance.now() + 520;
+  if (glassRaf) return;
+  const loop = () => { sendRect(); if (performance.now() < glassUntil) glassRaf = requestAnimationFrame(loop); else { glassRaf = 0; sendRect(); } };
+  glassRaf = requestAnimationFrame(loop);
+}
+function applyGlass(on) { S.blur = !!on; document.documentElement.classList.toggle('glass', S.blur); if (!S.blur) N.islandRect && N.islandRect({ visible: false }); else trackGlass(); }
 
 // ======================================================== mouse / hover
 let inside = false, enterT = null, leaveT = null;
@@ -428,6 +445,7 @@ function paintSettings(s) {
   $('optLyrics').checked = !!s.showLyrics;
   $('optApps').checked = !!s.peekApps;
   $('optNotifs').checked = s.mirrorNotifs !== false;
+  $('optBlur').checked = !!s.blur;
   $('optLogin').checked = !!s.openAtLogin;
   paintHooks(s.hooksInstalled);
 }
@@ -460,6 +478,7 @@ $('timerMin').onchange = () => { const v = Math.min(180, Math.max(1, +$('timerMi
 $('optLyrics').onchange = (e) => { S.showLyrics = e.target.checked; N.setSettings({ showLyrics: S.showLyrics }); paintMedia(); };
 $('optApps').onchange = (e) => N.setSettings({ peekApps: e.target.checked });
 $('optNotifs').onchange = (e) => N.setSettings({ mirrorNotifs: e.target.checked });
+$('optBlur').onchange = (e) => { N.setSettings({ blur: e.target.checked }); applyGlass(e.target.checked); };
 $('optLogin').onchange = (e) => N.setLogin(e.target.checked);
 
 // ======================================================== boot
@@ -468,6 +487,7 @@ function refreshAll() { paintMedia(); paintWeather(); paintDate(); paintTimer();
   try { Object.assign(S, await N.getSettings()); } catch {}
   if (!S.widgets.includes('system')) { S.widgets = [...S.widgets, 'system']; N.setSettings({ widgets: S.widgets }); }
   applyTheme(S.effectiveTheme || 'dark');
+  applyGlass(S.blur);
   timer.total = timer.left = (S.timerMinutes || 25) * 60;
   buildCards(); refreshAll(); render();
 })();

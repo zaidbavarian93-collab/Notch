@@ -265,3 +265,12 @@ input:focus { border-color: var(--accent); }
 .ib-item { display: flex; gap: 10px; align-items: center; padding: 9px 8px; border-radius: 12px; cursor: pointer; }
 .ib-item:hover { background: var(--card); }
 .ib-empty { text-align: center; color: var(--text-3); padding: 26px 0 18px; }
+
+/* glass (blurry) mode — the acrylic window behind provides the real blur */
+html.glass { --panel: rgba(22, 23, 28, .52); --card: rgba(255,255,255,.075); --card-hover: rgba(255,255,255,.11); --btn: rgba(255,255,255,.10); --panel-border: rgba(255,255,255,.10); }
+html.glass[data-theme="light"] { --panel: rgba(246, 246, 250, .55); --card: rgba(255,255,255,.55); --card-hover: rgba(255,255,255,.75); --btn: rgba(0,0,0,.06); --panel-border: rgba(255,255,255,.6); }
+html.glass #island:not(.s-idle):not(.s-peek) { box-shadow: 0 18px 40px rgba(0,0,0,.25); }
+html.glass #island:not(.s-idle):not(.s-peek)::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.07), transparent 40%); }
+html.glass .ring2::before { background: rgba(32,33,40,.9); }
+html.glass[data-theme="light"] .ring2::before { background: rgba(255,255,255,.92); }

@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('notch', {
   trash: (p) => ipcRenderer.invoke('shell:trash', p),
   installUpdate: () => ipcRenderer.send('update:install'),
   version: () => ipcRenderer.invoke('app:version'),
+  islandRect: (r) => ipcRenderer.send('island:rect', r),
   notifOpen: (n) => ipcRenderer.send('notif:open', n),
   notifMute: (appId) => ipcRenderer.send('notif:mute', appId),
 });

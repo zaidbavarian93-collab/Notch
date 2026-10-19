@@ -28,6 +28,8 @@ const DEFAULTS = {
   mirrorNotifs: true,
   notifMute: [],
   firstRun: true,
+  autoStart: true,
+  blur: false,
 };
 const settingsPath = () => path.join(app.getPath('userData'), 'settings.json');
 function loadSettings() {
@@ -70,6 +72,43 @@ function reposition() {
 }
 
 let interactive = false;
+// ---------------------------------------------------------------- glass (acrylic) backdrop
+let blurWin = null;
+function ensureBlur() {
+  if (!settings.blur || process.platform !== 'win32') { if (blurWin && !blurWin.isDestroyed()) blurWin.destroy(); blurWin = null; return; }
+  if (blurWin && !blurWin.isDestroyed()) return;
+  blurWin = new BrowserWindow({
+    width: 200, height: 32, x: 0, y: 0, frame: false, resizable: false, movable: false, focusable: false,
+    skipTaskbar: true, show: false, hasShadow: false, alwaysOnTop: true, backgroundColor: '#00000000',
+    backgroundMaterial: 'acrylic', webPreferences: { contextIsolation: true },
+  });
+  try { blurWin.setBackgroundMaterial('acrylic'); } catch {}
+  blurWin.setIgnoreMouseEvents(true);
+  blurWin.setAlwaysOnTop(true, 'pop-up-menu');
+  blurWin.loadURL('data:text/html,<html style="background:transparent"></html>');
+  blurWin.on('closed', () => { blurWin = null; });
+}
+function roundedBottomShape(w, h, r) {
+  const rects = [{ x: 0, y: 0, width: w, height: Math.max(0, h - r) }];
+  for (let i = 0; i < r; i++) {
+    const dy = i + 0.5, inset = Math.ceil(r - Math.sqrt(Math.max(0, r * r - dy * dy)));
+    rects.push({ x: inset, y: h - i - 1, width: Math.max(0, w - 2 * inset), height: 1 });
+  }
+  return rects;
+}
+let blurShown = false;
+ipcMain.on('island:rect', (_e, rc) => {
+  if (!settings.blur) return;
+  ensureBlur();
+  if (!blurWin || !win) return;
+  if (!rc || !rc.visible || rc.w < 10) { if (blurShown) { blurWin.hide(); blurShown = false; } return; }
+  const b = win.getBounds();
+  const w = Math.round(rc.w), h = Math.round(rc.h), r = Math.round(rc.r || 0);
+  blurWin.setBounds({ x: Math.round(b.x + rc.x), y: Math.round(b.y + rc.y), width: w, height: h });
+  try { blurWin.setShape(roundedBottomShape(w, h, r)); } catch {}
+  if (!blurShown) { blurWin.showInactive(); blurShown = true; win.moveTop(); }
+});
+
 ipcMain.on('mouse', (_e, v) => {
   if (!win) return;
   interactive = !!v;
@@ -220,17 +259,24 @@ ipcMain.handle('city:search', async (_e, name) => {
 });
 
 // ---------------------------------------------------------------- settings IPC
-ipcMain.handle('settings:get', () => ({ ...settings, effectiveTheme: effectiveTheme(), hooksInstalled: hooksInstalled(), openAtLogin: app.getLoginItemSettings().openAtLogin }));
+ipcMain.handle('settings:get', () => ({ ...settings, effectiveTheme: effectiveTheme(), hooksInstalled: hooksInstalled(), openAtLogin: isAutoStart() }));
 ipcMain.on('settings:set', (_e, patch) => {
   settings = { ...settings, ...patch }; saveSettings();
   if (patch.mirrorNotifs === true && !notifProc) startNotifs();
   if (patch.mirrorNotifs === false && notifProc) try { notifProc.kill(); } catch {}
   if ('theme' in patch) send('theme', effectiveTheme());
+  if ('blur' in patch) { ensureBlur(); if (!settings.blur && blurWin) { blurWin.destroy(); blurWin = null; } blurShown = false; }
   buildTrayMenu();
 });
 ipcMain.handle('hooks:install', () => installHooks());
 ipcMain.handle('hooks:remove', () => removeHooks());
-ipcMain.on('login:set', (_e, v) => { app.setLoginItemSettings({ openAtLogin: !!v }); buildTrayMenu(); });
+const LOGIN = () => ({ path: process.execPath, args: ['--autostart'], name: 'Notch' });
+function applyAutoStart() {
+  if (!app.isPackaged || process.platform !== 'win32') return;
+  try { app.setLoginItemSettings({ ...LOGIN(), openAtLogin: !!settings.autoStart, enabled: !!settings.autoStart }); } catch {}
+}
+function isAutoStart() { try { return app.isPackaged ? app.getLoginItemSettings(LOGIN()).openAtLogin : !!settings.autoStart; } catch { return !!settings.autoStart; } }
+ipcMain.on('login:set', (_e, v) => { settings.autoStart = !!v; saveSettings(); applyAutoStart(); buildTrayMenu(); });
 
 // ---------------------------------------------------------------- Claude Code bridge
 const sessions = new Map(); // session_id -> { start, files:Set }
@@ -437,7 +483,7 @@ function buildTrayMenu() {
     hooksInstalled()
       ? { label: 'إلغاء ربط Claude Code', click: () => removeHooks() }
       : { label: 'ربط Claude Code', click: () => { const r = installHooks(); send('peek', { kind: 'claude', text: r.ok ? 'تم ربط Claude Code' : 'تعذّر الربط', sub: '' }); } },
-    { label: 'التشغيل مع ويندوز', type: 'checkbox', checked: app.getLoginItemSettings().openAtLogin, click: (i) => app.setLoginItemSettings({ openAtLogin: i.checked }) },
+    { label: 'التشغيل مع ويندوز', type: 'checkbox', checked: isAutoStart(), click: (i) => { settings.autoStart = i.checked; saveSettings(); applyAutoStart(); } },
     { type: 'separator' },
     { label: updateReady ? 'إعادة التشغيل لتثبيت التحديث' : 'التحقق من التحديثات', click: () => updateReady ? installUpdate() : checkUpdates(true) },
     { label: `الإصدار ${app.getVersion()}`, enabled: false },
@@ -457,10 +503,14 @@ function createTray() {
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 else {
   app.on('second-instance', () => send('open-settings'));
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     loadSettings();
     if (process.platform === 'win32') app.setAppUserModelId('com.zaid.notch');
-    if (settings.firstRun) { settings.firstRun = false; saveSettings(); if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: true }); }
+    if (settings.firstRun) { settings.firstRun = false; settings.autoStart = true; saveSettings(); }
+    applyAutoStart();   // re-assert on every launch (survives updates / moved install path)
+    // at Windows sign-in the desktop/DWM may not be ready yet: wait a little before creating the overlay
+    const atLogin = process.argv.includes('--autostart') || app.getLoginItemSettings(LOGIN()).wasOpenedAtLogin;
+    await new Promise(r => setTimeout(r, atLogin ? 4000 : 0));
     createWindow();
     createTray();
     setupUpdater();
