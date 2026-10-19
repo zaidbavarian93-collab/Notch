@@ -447,6 +447,7 @@ function paintSettings(s) {
   $('optNotifs').checked = s.mirrorNotifs !== false;
   $('optBlur').checked = !!s.blur;
   paintSwatches();
+  paintTaskbar();
   $('optLogin').checked = !!s.openAtLogin;
   paintHooks(s.hooksInstalled);
 }
@@ -621,3 +622,23 @@ function setPill(color, op) {
 }
 $('swRow').addEventListener('click', (e) => { const b = e.target.closest('.sw'); if (b) setPill(b.dataset.v, b.dataset.v === 'clear' ? 0 : (S.pillOpacity || 1)); });
 $('pillOp').oninput = (e) => { $('pillOpV').textContent = e.target.value + '%'; setPill(S.pillColor && !S.pillColor.startsWith('linear') && S.pillColor !== 'clear' ? S.pillColor : '#050506', e.target.value / 100); };
+
+
+// ======================================================== taskbar style
+const TB_COLORS = ['#000000', '#1c1d22', '#f4f4f6', '#1e3a8a', '#6d28d9', '#be123c', '#047857', '#d97757', '#db2777', '#0ea5e9'];
+function tbCfg() { return Object.assign({ mode: 'default', color: '#000000', opacity: 0.5 }, S.taskbar || {}); }
+function paintTaskbar() {
+  const t = tbCfg();
+  document.querySelectorAll('#segTb button').forEach(b => b.classList.toggle('on', b.dataset.v === t.mode));
+  $('tbSw').innerHTML = TB_COLORS.map(c => `<button class="sw ${c === t.color ? 'on' : ''}" data-v="${c}" style="background:${c}"></button>`).join('')
+    + `<input type="color" class="sw-pick" id="tbPick" title="لون مخصص" value="${t.color}">`;
+  const usesColor = ['color', 'acrylic', 'blur'].includes(t.mode);
+  $('tbSw').classList.toggle('dis', !usesColor);
+  $('tbOp').disabled = !usesColor;
+  $('tbOp').value = Math.round(t.opacity * 100); $('tbOpV').textContent = $('tbOp').value + '%';
+  $('tbPick').oninput = (e) => setTb({ color: e.target.value });
+}
+function setTb(patch) { S.taskbar = Object.assign(tbCfg(), patch); N.setSettings({ taskbar: S.taskbar }); paintTaskbar(); }
+$('segTb').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) setTb({ mode: b.dataset.v }); });
+$('tbSw').addEventListener('click', (e) => { const b = e.target.closest('.sw'); if (b) setTb({ color: b.dataset.v }); });
+$('tbOp').oninput = (e) => { $('tbOpV').textContent = e.target.value + '%'; S.taskbar = Object.assign(tbCfg(), { opacity: e.target.value / 100 }); N.setSettings({ taskbar: S.taskbar }); };

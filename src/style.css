@@ -290,3 +290,9 @@ html.pill-clear #island.s-peek { backdrop-filter: none; }
 .op-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--text-2); }
 .op-row input[type=range] { flex: 1; accent-color: var(--accent); }
 .op-row b { min-width: 34px; text-align: left; font-variant-numeric: tabular-nums; }
+
+.set-grid section.span-row { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.set-grid section.span-row .half h4 { margin-top: 0; }
+.seg5 button { font-size: 11px; padding: 0 2px; }
+.sw-row.dis { opacity: .35; pointer-events: none; }
+.op-row input:disabled { opacity: .35; }

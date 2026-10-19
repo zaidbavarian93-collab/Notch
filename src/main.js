@@ -9,7 +9,7 @@ const { spawn } = require('child_process');
 
 const PORT = 47811;
 const WIN_W = 900;
-const WIN_H = 460;
+const WIN_H = 640;
 
 let win = null;
 let tray = null;
@@ -32,6 +32,7 @@ const DEFAULTS = {
   blur: false,
   pillColor: '#050506',
   pillOpacity: 1,
+  taskbar: { mode: 'default', color: '#000000', opacity: 0.5 },
 };
 const settingsPath = () => path.join(app.getPath('userData'), 'settings.json');
 function loadSettings() {
@@ -178,6 +179,20 @@ ipcMain.on('notif:open', (_e, n) => {
 });
 ipcMain.on('notif:mute', (_e, appId) => { settings.notifMute = [...new Set([...(settings.notifMute || []), appId])]; saveSettings(); });
 
+// ---------------------------------------------------------------- taskbar styler
+let tbProc = null;
+function applyTaskbar() {
+  if (process.platform !== 'win32') return;
+  const t = settings.taskbar || { mode: 'default' };
+  if (t.mode === 'default') { if (tbProc) { try { tbProc.stdin.write(JSON.stringify({ mode: 'default' }) + '\n'); } catch {} } return; }
+  if (!tbProc) {
+    const script = path.join(__dirname, 'taskbar.ps1').replace('app.asar', 'app.asar.unpacked');
+    tbProc = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script], { windowsHide: true });
+    tbProc.on('exit', () => { tbProc = null; if ((settings.taskbar || {}).mode !== 'default' && !app.isQuitting) setTimeout(applyTaskbar, 3000); });
+  }
+  try { tbProc.stdin.write(JSON.stringify(t) + '\n'); } catch {}
+}
+
 function mediaCommand(cmd) { if (mediaProc) try { mediaProc.stdin.write(cmd + '\n'); } catch {} }
 ipcMain.on('media', (_e, cmd) => mediaCommand(cmd));
 
@@ -267,6 +282,7 @@ ipcMain.on('settings:set', (_e, patch) => {
   if (patch.mirrorNotifs === true && !notifProc) startNotifs();
   if (patch.mirrorNotifs === false && notifProc) try { notifProc.kill(); } catch {}
   if ('theme' in patch) send('theme', effectiveTheme());
+  if ('taskbar' in patch) applyTaskbar();
   if ('blur' in patch) { ensureBlur(); if (!settings.blur && blurWin) { blurWin.destroy(); blurWin = null; } blurShown = false; }
   buildTrayMenu();
 });
@@ -519,8 +535,11 @@ else {
     startServer();
     startMedia();
     startNotifs();
+    applyTaskbar();
     win.webContents.on('did-finish-load', () => { send('theme', effectiveTheme()); startWeather(); if (lastTrackKey) lastTrackKey = ''; });
   });
-  app.on('will-quit', () => { globalShortcut.unregisterAll(); if (mediaProc) try { mediaProc.kill(); } catch {} });
+  app.on('will-quit', () => {
+  app.isQuitting = true;
+  if (tbProc) { try { tbProc.stdin.write(JSON.stringify({ mode: 'default' }) + '\n'); tbProc.stdin.end(); } catch {} } globalShortcut.unregisterAll(); if (mediaProc) try { mediaProc.kill(); } catch {} });
   app.on('window-all-closed', (e) => e.preventDefault());
 }

@@ -105,10 +105,6 @@
 
           <h4>المؤقّت (دقائق)</h4>
           <div class="row"><input id="timerMin" type="number" min="1" max="180" style="width:80px"></div>
-
-          <h4>لون النوتش</h4>
-          <div class="sw-row" id="swRow"></div>
-          <div class="op-row"><span>الشفافية</span><input type="range" id="pillOp" min="0" max="100" step="5"><b id="pillOpV"></b></div>
         </section>
         <section>
           <h4>خيارات</h4>
@@ -121,6 +117,21 @@
           <h4>Claude Code</h4>
           <div class="hint" id="hookState"></div>
           <button class="btn-sm wide" id="btnHooks"></button>
+        </section>
+        <section class="span-row">
+          <div class="half">
+            <h4>لون النوتش</h4>
+            <div class="sw-row" id="swRow"></div>
+            <div class="op-row"><span>الشفافية</span><input type="range" id="pillOp" min="0" max="100" step="5"><b id="pillOpV"></b></div>
+          </div>
+          <div class="half">
+            <h4>شريط المهام</h4>
+            <div class="seg seg5" id="segTb">
+              <button data-v="default">ويندوز</button><button data-v="clear">شفاف</button><button data-v="blur">ضبابي</button><button data-v="acrylic">أكريليك</button><button data-v="color">لون</button>
+            </div>
+            <div class="sw-row" id="tbSw" style="margin-top:8px"></div>
+            <div class="op-row"><span>الشفافية</span><input type="range" id="tbOp" min="0" max="100" step="5"><b id="tbOpV"></b></div>
+          </div>
         </section>
       </div>
     </div>
