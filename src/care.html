@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>العناية بالحاسوب</title>
+<link rel="stylesheet" href="care.css">
+</head>
+<body>
+<div class="drag"></div>
+<aside class="side">
+  <div class="brand"><span class="logo" id="logo"></span><div><b>النوتش</b><small id="ver">العناية بالحاسوب</small></div></div>
+  <nav id="nav">
+    <button data-tab="home"><i data-i="heart"></i>الرئيسية</button>
+    <button data-tab="clean"><i data-i="trash"></i>تنظيف التخزين</button>
+    <button data-tab="large"><i data-i="folder"></i>الملفات الكبيرة</button>
+    <button data-tab="proc"><i data-i="list"></i>العمليات</button>
+    <button data-tab="startup"><i data-i="power"></i>برامج بدء التشغيل</button>
+    <button data-tab="protect"><i data-i="shield"></i>الحماية والتحديث</button>
+    <button data-tab="tools"><i data-i="apps"></i>أدوات سريعة</button>
+  </nav>
+</aside>
+
+<main>
+  <!-- HOME -->
+  <section id="t-home" class="tab">
+    <header><h1>صحة الحاسوب</h1><p id="homeSub">نظرة عامة على حالة جهازك</p></header>
+    <div class="hero card">
+      <div class="score" id="score" style="--p:0"><b id="scoreN">--</b><span>درجة الصحة</span></div>
+      <div class="hero-body">
+        <h2 id="scoreTitle">جارِ الفحص…</h2>
+        <ul class="checks" id="checks"></ul>
+      </div>
+      <div class="hero-act">
+        <button class="primary big" id="btnBoost"><i data-i="rocket"></i><span>تسريع الآن</span></button>
+        <button class="ghost" id="btnRecheck"><i data-i="refresh"></i>إعادة الفحص</button>
+      </div>
+    </div>
+    <div class="meters">
+      <div class="card meter"><div class="mh"><span>المعالج</span><b id="mCpu">--</b></div><div class="bar"><i id="bCpu"></i></div></div>
+      <div class="card meter"><div class="mh"><span>الذاكرة</span><b id="mRam">--</b></div><div class="bar"><i id="bRam"></i></div><small id="sRam"></small></div>
+      <div class="card meter"><div class="mh"><span>القرص C</span><b id="mDisk">--</b></div><div class="bar"><i id="bDisk"></i></div><small id="sDisk"></small></div>
+      <div class="card meter"><div class="mh"><span>مدة التشغيل</span><b id="mUp">--</b></div><small>إعادة التشغيل أسبوعياً تحافظ على السرعة</small></div>
+    </div>
+    <div class="toast" id="boostRes"></div>
+  </section>
+
+  <!-- CLEAN -->
+  <section id="t-clean" class="tab">
+    <header><h1>تنظيف التخزين</h1><p>احذف الملفات المؤقتة وغير الضرورية بأمان. لا تُمسّ ملفاتك الشخصية.</p></header>
+    <div class="card">
+      <div class="row-head"><b id="cleanTotal">—</b><div class="gap"></div><button class="ghost" id="btnScan"><i data-i="refresh"></i>فحص</button><button class="primary" id="btnClean" disabled><i data-i="trash"></i>تنظيف المحدد</button></div>
+      <ul class="list" id="cleanList"><li class="empty">اضغط «فحص» لحساب المساحة القابلة للتحرير</li></ul>
+      <p class="note">بعض المجلدات (ملفات ويندوز المؤقتة وملفات التحديث) قد تحتاج تشغيل البرنامج كمدير لتنظيفها بالكامل.</p>
+    </div>
+  </section>
+
+  <!-- LARGE -->
+  <section id="t-large" class="tab">
+    <header><h1>الملفات الكبيرة</h1><p>ابحث في مجلداتك (التنزيلات، سطح المكتب، المستندات، الفيديو…) عن الملفات التي تأخذ مساحة كبيرة.</p></header>
+    <div class="card">
+      <div class="row-head"><span>أكبر من</span>
+        <select id="minMB"><option value="100">100 MB</option><option value="500" selected>500 MB</option><option value="1024">1 GB</option><option value="5120">5 GB</option></select>
+        <div class="gap"></div><button class="primary" id="btnLarge"><i data-i="refresh"></i>بحث</button></div>
+      <ul class="list" id="largeList"><li class="empty">اضغط «بحث»</li></ul>
+    </div>
+  </section>
+
+  <!-- PROCESSES -->
+  <section id="t-proc" class="tab">
+    <header><h1>العمليات</h1><p>البرامج الأكثر استهلاكاً للذاكرة الآن. يمكنك إنهاء أي برنامج عالق.</p></header>
+    <div class="card">
+      <div class="row-head"><b id="procSum"></b><div class="gap"></div><button class="ghost" id="btnProc"><i data-i="refresh"></i>تحديث</button></div>
+      <ul class="list" id="procList"></ul>
+    </div>
+  </section>
+
+  <!-- STARTUP -->
+  <section id="t-startup" class="tab">
+    <header><h1>برامج بدء التشغيل</h1><p>كلما قلّت البرامج التي تعمل مع ويندوز، أقلع الجهاز أسرع.</p></header>
+    <div class="card">
+      <div class="row-head"><b id="stSum"></b><div class="gap"></div><button class="ghost" id="btnStartup"><i data-i="refresh"></i>تحديث</button></div>
+      <ul class="list" id="stList"></ul>
+      <p class="note">البرامج المثبّتة لكل المستخدمين تحتاج صلاحيات المدير لتعطيلها.</p>
+    </div>
+  </section>
+
+  <!-- PROTECT -->
+  <section id="t-protect" class="tab">
+    <header><h1>الحماية والتحديث</h1><p>حالة Microsoft Defender وتحديثات ويندوز.</p></header>
+    <div class="grid2">
+      <div class="card tile"><i data-i="shield" class="ti"></i><h3>Microsoft Defender</h3><p id="defState">—</p>
+        <div class="acts"><button class="primary" id="btnQuickScan">فحص سريع</button><button class="ghost" data-url="windowsdefender://threat">فتح أمن ويندوز</button></div></div>
+      <div class="card tile"><i data-i="download" class="ti"></i><h3>تحديث ويندوز</h3><p id="wuState">—</p>
+        <div class="acts"><button class="primary" data-url="ms-settings:windowsupdate-action">التحقق من التحديثات</button></div></div>
+      <div class="card tile"><i data-i="apps" class="ti"></i><h3>حماية المتصفح الافتراضي</h3><p>تأكد أن المتصفح الافتراضي لم يتغيّر من دون علمك.</p>
+        <div class="acts"><button class="ghost" data-url="ms-settings:defaultapps">التطبيقات الافتراضية</button></div></div>
+      <div class="card tile"><i data-i="heart" class="ti"></i><h3>تحديث النوتش</h3><p id="appVer">—</p>
+        <div class="acts"><button class="ghost" data-url="https://github.com/zaidbavarian93-collab/Notch/releases">سجلّ الإصدارات</button></div></div>
+    </div>
+  </section>
+
+  <!-- TOOLS -->
+  <section id="t-tools" class="tab">
+    <header><h1>أدوات سريعة</h1><p>اختصارات لأهم إعدادات ويندوز.</p></header>
+    <div class="grid3" id="toolsGrid"></div>
+  </section>
+</main>
+<script src="icons.js"></script>
+<script src="care.js"></script>
+</body>
+</html>

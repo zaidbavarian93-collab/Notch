@@ -1,0 +1,69 @@
+{
+  "name": "notch",
+  "version": "1.1.0",
+  "description": "Notch for Windows: dynamic notch + PC care",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64 --publish never",
+    "release": "electron-builder --win --x64 --publish always"
+  },
+  "keywords": [],
+  "author": "Zaid",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "productName": "Notch",
+  "build": {
+    "appId": "com.zaid.notch",
+    "productName": "Notch",
+    "files": [
+      "src/**/*"
+    ],
+    "asarUnpack": [
+      "src/*.ps1"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Notch",
+      "artifactName": "Notch-Setup-${version}.${ext}",
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "zaidbavarian93-collab",
+        "repo": "Notch",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zaidbavarian93-collab/Notch.git"
+  }
+}

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+<title>Notch</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage">
+  <div id="island" class="s-idle">
+    <!-- collapsed / peek layer -->
+    <div class="pill-layer">
+      <div class="pill-idle">
+        <div class="mini-art" id="miniArt"></div>
+        <div class="pill-spacer"></div>
+        <div class="mini-claude" id="miniClaude"><i></i><i></i><i></i></div>
+        <div class="eq" id="miniEq"><i></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="pill-peek" id="peek">
+        <span class="peek-icon" id="peekIcon"></span>
+        <span class="peek-text" id="peekText"></span>
+        <span class="peek-sub" id="peekSub"></span>
+      </div>
+    </div>
+
+    <!-- expanded: widgets -->
+    <div class="view view-open" id="viewOpen">
+      <div class="toolbar">
+        <div class="tb-group">
+          <button class="tb" id="btnSettings" title="الإعدادات"></button>
+          <button class="tb" id="btnTheme" title="فاتح / داكن"></button>
+          <button class="tb" id="btnCare" title="العناية بالحاسوب"></button>
+        </div>
+        <div class="tb-title" id="tbClock"></div>
+        <div class="tb-group tb-status">
+          <span class="tb-claude" id="tbClaude" title="Claude Code"></span>
+          <span class="tb-bat" id="tbBat"></span>
+        </div>
+      </div>
+      <div class="cards" id="cards"></div>
+      <div class="lyrics" id="lyrics">
+        <div class="ly-cur" id="lyCur" dir="auto"></div>
+        <div class="ly-next" id="lyNext" dir="auto"></div>
+      </div>
+    </div>
+
+    <!-- Claude approval -->
+    <div class="view view-ask" id="viewAsk">
+      <div class="ask">
+        <div class="dots dots-orange" id="askDots"></div>
+        <div class="ask-body">
+          <div class="ask-title">Claude يحتاج موافقتك</div>
+          <div class="ask-cmd" id="askCmd" dir="ltr"></div>
+          <div class="ask-proj" id="askProj" dir="ltr"></div>
+        </div>
+        <div class="ask-btns">
+          <button class="btn-allow" id="btnAllow">سماح <kbd>Ctrl Alt Y</kbd></button>
+          <button class="btn-deny" id="btnDeny">رفض <kbd>Ctrl Alt N</kbd></button>
+        </div>
+      </div>
+      <div class="ask-more" id="askMore"></div>
+    </div>
+
+    <!-- Claude done -->
+    <div class="view view-done" id="viewDone">
+      <div class="ask">
+        <div class="dots dots-green" id="doneDots"></div>
+        <div class="ask-body">
+          <div class="ask-title" id="doneTitle"></div>
+          <div class="ask-sub" id="doneSub"></div>
+          <div class="ask-proj" id="doneProj" dir="ltr"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- settings -->
+    <div class="view view-settings" id="viewSettings">
+      <div class="set-head">
+        <div class="set-title">تخصيص النوتش</div>
+        <button class="btn-done" id="btnSetDone">تم</button>
+      </div>
+      <div class="set-grid">
+        <section>
+          <h4>الودجات وترتيبها</h4>
+          <ul class="w-list" id="wList"></ul>
+        </section>
+        <section>
+          <h4>المدينة (للطقس)</h4>
+          <div class="row">
+            <input id="cityInput" placeholder="مثلاً: الفلوجة، بغداد، Istanbul">
+            <button class="btn-sm" id="btnCity">بحث</button>
+          </div>
+          <div class="hint" id="cityNow"></div>
+
+          <h4>المظهر</h4>
+          <div class="seg" id="segTheme">
+            <button data-v="auto">تلقائي</button><button data-v="light">فاتح</button><button data-v="dark">داكن</button>
+          </div>
+
+          <h4>المؤقّت (دقائق)</h4>
+          <div class="row"><input id="timerMin" type="number" min="1" max="180" style="width:80px"></div>
+        </section>
+        <section>
+          <h4>خيارات</h4>
+          <label class="tg"><input type="checkbox" id="optLyrics"><span></span>إظهار كلمات الأغاني</label>
+          <label class="tg"><input type="checkbox" id="optApps"><span></span>تنبيه عند فتح تطبيق</label>
+          <label class="tg"><input type="checkbox" id="optLogin"><span></span>التشغيل مع ويندوز</label>
+
+          <h4>Claude Code</h4>
+          <div class="hint" id="hookState"></div>
+          <button class="btn-sm wide" id="btnHooks"></button>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="icons.js"></script>
+<script src="renderer.js"></script>
+</body>
+</html>
